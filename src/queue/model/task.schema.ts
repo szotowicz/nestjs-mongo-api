@@ -12,6 +12,9 @@ export class Task {
   @Prop()
   _id: string;
 
+  @Prop()
+  filePath: string;
+
   @Prop({ enum: TaskStatus })
   status: TaskStatus;
 

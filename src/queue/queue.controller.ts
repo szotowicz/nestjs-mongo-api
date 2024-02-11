@@ -1,4 +1,4 @@
-import { Controller, Get, Param, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Param, ParseFilePipeBuilder, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiConsumes, ApiCreatedResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { QueueService } from './queue.service';
@@ -14,11 +14,23 @@ export class QueueController {
   @ApiOperation({ tags: ['Queue'] })
   @ApiConsumes('multipart/form-data')
   @ApiCreatedResponse({ type: TaskCreatedDto })
-  @UseInterceptors(FileInterceptor('file'))
-  async createTask(@UploadedFile() file: Express.Multer.File): Promise<TaskCreatedDto> {
-    console.log(file);
-    // TODO
-    const taskId = await this.queueService.createTask();
+  @UseInterceptors(
+    FileInterceptor('file', {
+      dest: './upload',
+      limits: { fileSize: 10 * 1024 * 1024 },
+    }),
+  )
+  async createTask(
+    @UploadedFile(
+      new ParseFilePipeBuilder()
+        .addFileTypeValidator({
+          fileType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        })
+        .build({ fileIsRequired: true }),
+    )
+    file: Express.Multer.File,
+  ): Promise<TaskCreatedDto> {
+    const taskId = await this.queueService.createTask(file.path);
     return new TaskCreatedDto(taskId);
   }
 

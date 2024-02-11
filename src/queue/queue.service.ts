@@ -9,11 +9,10 @@ import { TaskDomain } from './model/task.domain';
 export class QueueService {
   constructor(@InjectModel(Task.name) private taskModel: Model<Task>) {}
 
-  async createTask(): Promise<string> {
-    const fileName = uuid();
-    // TODO
+  async createTask(filePath: string): Promise<string> {
     const createdTask = await this.taskModel.create({
-      _id: fileName,
+      _id: uuid(),
+      filePath,
       status: TaskStatus.TODO,
       details: '',
     });

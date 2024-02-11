@@ -36,7 +36,7 @@ docker compose up -d
 http://localhost:8080/docs
 
 
-TODO:
--save file
--queue
--file processing
+
+## TODO:
+* authentication mechanism
+* scheduler for regular deletion of uploaded files (processed or incorrect)
