@@ -1,11 +1,17 @@
+import { ApiProperty } from '@nestjs/swagger';
 import { TaskDomain } from '../model/task.domain';
 import { TaskStatus } from '../model/task.schema';
 
 export class TaskDto {
+  @ApiProperty()
   id: string;
+  @ApiProperty({ enum: TaskStatus })
   status: TaskStatus;
-  details?: string; // Defined only if status is "FAILURE"
+  @ApiProperty({ description: 'Defined only if status is "FAILURE"', required: false })
+  details?: string;
+  @ApiProperty()
   createdAt: string;
+  @ApiProperty()
   updatedAt: string;
 
   constructor(model: TaskDomain) {

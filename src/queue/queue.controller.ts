@@ -1,5 +1,6 @@
 import { Controller, Get, Param, Post, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiConsumes, ApiCreatedResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { QueueService } from './queue.service';
 import { taskIdPathParam } from './dto/task-id-path-param.dto';
 import { TaskCreatedDto } from './dto/task-created.dto';
@@ -10,6 +11,9 @@ export class QueueController {
   constructor(private readonly queueService: QueueService) {}
 
   @Post('/queue')
+  @ApiOperation({ tags: ['Queue'] })
+  @ApiConsumes('multipart/form-data')
+  @ApiCreatedResponse({ type: TaskCreatedDto })
   @UseInterceptors(FileInterceptor('file'))
   async createTask(@UploadedFile() file: Express.Multer.File): Promise<TaskCreatedDto> {
     console.log(file);
@@ -19,6 +23,8 @@ export class QueueController {
   }
 
   @Get('/queue/:taskId')
+  @ApiOperation({ tags: ['Queue'] })
+  @ApiOkResponse({ type: TaskDto })
   async getTaskById(@Param() params: taskIdPathParam): Promise<TaskDto> {
     const task = await this.queueService.getTaskById(params.taskId);
     return new TaskDto(task);

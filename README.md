@@ -1,4 +1,4 @@
-# NESTJS-MONGO-API
+# NestJS-Mongo-API
 
 ## Installation
 
@@ -32,8 +32,11 @@ After images are property built, start all service with single command:
 docker compose up -d
 ```
 
+## API definition
+http://localhost:8080/docs
+
+
 TODO:
 -save file
--swagger
 -queue
 -file processing
