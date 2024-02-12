@@ -40,3 +40,7 @@ http://localhost:8080/docs
 ## TODO:
 * authentication mechanism
 * scheduler for regular deletion of uploaded files (processed or incorrect)
+* unit tests
+* support for large .xlsx files
+* include time zones (date parsing and unification)
+* improve phone parsing (class-transformer), exclude phone prefix

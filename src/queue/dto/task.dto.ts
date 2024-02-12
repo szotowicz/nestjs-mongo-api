@@ -7,7 +7,7 @@ export class TaskDto {
   id: string;
   @ApiProperty({ enum: TaskStatus })
   status: TaskStatus;
-  @ApiProperty({ description: 'Defined only if status is "FAILURE"', required: false })
+  @ApiProperty({ description: 'Defined only if status is "SUCCESS" or "FAILURE"', required: false })
   details?: string;
   @ApiProperty()
   createdAt: string;
