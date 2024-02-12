@@ -1,29 +1,36 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
+import { InjectQueue } from '@nestjs/bull';
 import { Model } from 'mongoose';
 import { v4 as uuid } from 'uuid';
+import { Queue } from 'bull';
 import * as fs from 'fs';
 import readXlsxFile, { Row } from 'read-excel-file/node';
-import { Task, TaskStatus } from './model/task.schema';
+import { TASKS_QUEUE } from '../constants';
 import { TaskDomain } from './model/task.domain';
+import { Task, TaskStatus } from './model/task.schema';
 import { Reservation } from './model/reservation.schema';
 import { ReservationParsed } from './model/reservation';
 
 @Injectable()
 export class QueueService {
+  private readonly logger = new Logger(QueueService.name);
   constructor(
+    @InjectQueue(TASKS_QUEUE) private readonly taskQueue: Queue,
     @InjectModel(Task.name) private readonly taskModel: Model<Task>,
     @InjectModel(Reservation.name) private readonly reservationModel: Model<Reservation>,
   ) {}
 
   async createTask(filePath: string): Promise<string> {
-    const createdTask = await this.taskModel.create({
-      _id: uuid(),
+    const taskId = uuid();
+    await this.taskQueue.add({ id: taskId });
+    await this.taskModel.create({
+      _id: taskId,
       filePath,
       status: TaskStatus.TODO,
       details: '',
     });
-    return createdTask._id;
+    return taskId;
   }
 
   async getTaskById(taskId: string): Promise<TaskDomain> {
@@ -37,7 +44,36 @@ export class QueueService {
     return task;
   }
 
-  async insert(taskId: string, rows: Row[]): Promise<void> {
+  async processFile(taskId: string): Promise<void> {
+    const task = await this.taskModel.findById(taskId);
+    if (!task) {
+      this.logger.error(`Task with ID "${taskId}" does not exist`);
+      return;
+    }
+
+    this.logger.log(`Start processing file: ${task.filePath}`);
+    if (!fs.existsSync(task.filePath)) {
+      await this.taskModel.updateOne(
+        { _id: taskId },
+        { status: TaskStatus.FAILURE, details: 'The uploaded file does not exist' },
+      );
+      return;
+    }
+
+    try {
+      const rows = await readXlsxFile(task.filePath);
+      await this.insert(taskId, rows);
+      this.logger.log(`File processing completed: ${task.filePath}`);
+    } catch (error) {
+      this.logger.error(`File processing failed. Reason: ${error}`);
+      await this.taskModel.updateOne(
+        { _id: taskId },
+        { status: TaskStatus.FAILURE, details: 'File processing failed' },
+      );
+    }
+  }
+
+  private async insert(taskId: string, rows: Row[]): Promise<void> {
     if (rows.length < 3) {
       await this.taskModel.updateOne(
         { _id: taskId },
@@ -52,7 +88,7 @@ export class QueueService {
     for await (const row of rows.slice(2)) {
       const reservationParsed = ReservationParsed.parse(row);
       if (!reservationParsed) {
-        console.log('Invalid:', row);
+        this.logger.log(`Invalid: ${JSON.stringify(row, null, 2)}`);
         failed++;
         continue;
       }
@@ -63,10 +99,10 @@ export class QueueService {
       );
       if (updatedRecord) {
         updated++;
-        console.log('Updated:', reservationParsed._id);
+        this.logger.log(`Updated: ${reservationParsed._id}`);
       } else {
         created++;
-        console.log('Created:', reservationParsed._id);
+        this.logger.log(`Created: ${reservationParsed._id}`);
       }
     }
     await this.taskModel.updateOne(
@@ -76,30 +112,5 @@ export class QueueService {
         details: `File processing completed. Created: ${created}. Updated: ${updated}. Incorrect and skipped records: ${failed}`,
       },
     );
-  }
-
-  async processFile(taskId: string): Promise<void> {
-    const task = await this.getTaskById(taskId);
-    console.log(`Start processing file: ${task.filePath}`);
-    if (!fs.existsSync(task.filePath)) {
-      await this.taskModel.updateOne(
-        { _id: taskId },
-        { status: TaskStatus.FAILURE, details: 'The uploaded file does not exist' },
-      );
-      return;
-    }
-
-    await this.taskModel.updateOne({ _id: taskId }, { status: TaskStatus.IN_PROGRESS });
-    try {
-      const rows = await readXlsxFile(task.filePath);
-      await this.insert(taskId, rows);
-      console.log(`File processing completed: ${task.filePath}`);
-    } catch (error) {
-      console.error(`File processing failed. Reason: ${error}`);
-      await this.taskModel.updateOne(
-        { _id: taskId },
-        { status: TaskStatus.FAILURE, details: 'File processing failed' },
-      );
-    }
   }
 }

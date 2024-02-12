@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { RESERVATIONS_DB_COLLECTION } from '../../constants';
 
 export enum ReservationStatus {
   RESERVED = 'RESERVED',
@@ -6,7 +7,7 @@ export enum ReservationStatus {
   CANCELLED = 'CANCELLED',
 }
 
-@Schema({ collection: 'reservations', timestamps: true })
+@Schema({ collection: RESERVATIONS_DB_COLLECTION, timestamps: true })
 export class Reservation {
   @Prop()
   _id: string;

@@ -1,4 +1,5 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { TASKS_DB_COLLECTION } from '../../constants';
 
 export enum TaskStatus {
   TODO = 'TODO',
@@ -7,7 +8,7 @@ export enum TaskStatus {
   FAILURE = 'FAILURE',
 }
 
-@Schema({ collection: 'tasks', timestamps: true })
+@Schema({ collection: TASKS_DB_COLLECTION, timestamps: true })
 export class Task {
   @Prop()
   _id: string;
